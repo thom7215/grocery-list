@@ -167,6 +167,12 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       box-shadow: var(--shadow);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .item:active:not(.done) {
+      background: var(--surface-raised);
     }
 
     .item.done {
@@ -182,7 +188,7 @@
       height: 1.25rem;
       accent-color: var(--accent);
       flex-shrink: 0;
-      cursor: pointer;
+      pointer-events: none;
     }
 
     .item-text {
@@ -526,8 +532,8 @@
       }
 
       const renderRow = (item) => `
-        <div class="item${item.done ? ' done' : ''}">
-          <input type="checkbox" data-id="${item.id}" ${item.done ? 'checked' : ''} aria-label="Mark ${esc(item.text)}">
+        <div class="item${item.done ? ' done' : ''}" data-id="${item.id}" data-done="${item.done}">
+          <input type="checkbox" ${item.done ? 'checked' : ''} tabindex="-1" aria-hidden="true">
           <span class="item-text">${esc(item.text)}</span>
           <button class="delete-btn" type="button" data-delete="${item.id}" aria-label="Remove ${esc(item.text)}">&times;</button>
         </div>`;
@@ -553,16 +559,18 @@
       void addItem(text);
     });
 
-    document.getElementById('list').addEventListener('change', (e) => {
-      const id = e.target.dataset?.id;
-      if (!id) return;
-      void toggleItem(id, e.target.checked);
-    });
-
     document.getElementById('list').addEventListener('click', (e) => {
-      const id = e.target.dataset?.delete;
-      if (!id) return;
-      void deleteItem(id);
+      const deleteBtn = e.target.closest('.delete-btn');
+      if (deleteBtn) {
+        e.stopPropagation();
+        const id = deleteBtn.dataset.delete;
+        if (id) void deleteItem(id);
+        return;
+      }
+
+      const row = e.target.closest('.item[data-id]');
+      if (!row) return;
+      void toggleItem(row.dataset.id, row.dataset.done !== 'true');
     });
 
     document.getElementById('clearDone').addEventListener('click', () => void clearDone());
