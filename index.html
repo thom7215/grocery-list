@@ -143,6 +143,18 @@
       gap: 0.5rem;
     }
 
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+
+    .btn-sm {
+      padding: 0.45rem 0.75rem;
+      font-size: 0.82rem;
+    }
+
     .section-label {
       font-size: 0.75rem;
       font-weight: 700;
@@ -338,7 +350,10 @@
 
     <div class="toolbar">
       <span class="section-label" id="listLabel">Items</span>
-      <button class="btn btn-secondary" id="clearDone" type="button" hidden>Clear checked</button>
+      <div class="toolbar-actions">
+        <button class="btn btn-secondary btn-sm" id="undoBtn" type="button" hidden>Undo</button>
+        <button class="btn btn-secondary btn-sm" id="clearDone" type="button" hidden>Clear checked</button>
+      </div>
     </div>
 
     <div class="list" id="list"></div>
@@ -373,6 +388,7 @@
     let config = loadConfig();
     let items = [];
     let busy = false;
+    let undoSnapshot = null;
 
     function loadConfig() {
       try {
@@ -420,6 +436,23 @@
       return d.innerHTML;
     }
 
+    function captureUndo() {
+      undoSnapshot = JSON.parse(JSON.stringify(items));
+      document.getElementById('undoBtn').hidden = false;
+    }
+
+    function clearUndo() {
+      undoSnapshot = null;
+      document.getElementById('undoBtn').hidden = true;
+    }
+
+    async function saveItems(nextItems) {
+      items = nextItems;
+      const active = items.filter(i => !i.done).length;
+      setStatus(`${active} item${active === 1 ? '' : 's'}`, 'ok');
+      render();
+    }
+
     async function loadItems() {
       if (!isConfigured()) {
         document.getElementById('setupBanner').hidden = false;
@@ -445,16 +478,15 @@
       if (!text.trim() || busy || !isConfigured()) return;
       busy = true;
       document.getElementById('addBtn').disabled = true;
+      captureUndo();
       try {
         setStatus('Saving…');
-        items = await apiFetch('/api/groceries', {
+        await saveItems(await apiFetch('/api/groceries', {
           method: 'POST',
           body: JSON.stringify({ text: text.trim() }),
-        });
-        const active = items.filter(i => !i.done).length;
-        setStatus(`${active} item${active === 1 ? '' : 's'}`, 'ok');
-        render();
+        }));
       } catch {
+        clearUndo();
         setStatus('Add failed', 'error');
       } finally {
         busy = false;
@@ -465,15 +497,14 @@
     async function toggleItem(id, done) {
       if (busy || !isConfigured()) return;
       busy = true;
+      captureUndo();
       try {
-        items = await apiFetch(`/api/groceries/${id}`, {
+        await saveItems(await apiFetch(`/api/groceries/${id}`, {
           method: 'PATCH',
           body: JSON.stringify({ done }),
-        });
-        const active = items.filter(i => !i.done).length;
-        setStatus(`${active} item${active === 1 ? '' : 's'}`, 'ok');
-        render();
+        }));
       } catch {
+        clearUndo();
         setStatus('Update failed', 'error');
       } finally {
         busy = false;
@@ -483,12 +514,11 @@
     async function deleteItem(id) {
       if (busy || !isConfigured()) return;
       busy = true;
+      captureUndo();
       try {
-        items = await apiFetch(`/api/groceries/${id}`, { method: 'DELETE' });
-        const active = items.filter(i => !i.done).length;
-        setStatus(`${active} item${active === 1 ? '' : 's'}`, 'ok');
-        render();
+        await saveItems(await apiFetch(`/api/groceries/${id}`, { method: 'DELETE' }));
       } catch {
+        clearUndo();
         setStatus('Delete failed', 'error');
       } finally {
         busy = false;
@@ -500,16 +530,37 @@
       const remaining = items.filter(i => !i.done);
       if (remaining.length === items.length) return;
       busy = true;
+      captureUndo();
       try {
         await apiFetch('/api/groceries', {
           method: 'PUT',
           body: JSON.stringify(remaining),
         });
-        items = remaining;
-        setStatus(`${items.length} item${items.length === 1 ? '' : 's'}`, 'ok');
-        render();
+        await saveItems(remaining);
       } catch {
+        clearUndo();
         setStatus('Clear failed', 'error');
+      } finally {
+        busy = false;
+      }
+    }
+
+    async function undoLast() {
+      if (!undoSnapshot || busy || !isConfigured()) return;
+      busy = true;
+      const previous = undoSnapshot;
+      clearUndo();
+      try {
+        setStatus('Undoing…');
+        await apiFetch('/api/groceries', {
+          method: 'PUT',
+          body: JSON.stringify(previous),
+        });
+        await saveItems(previous);
+      } catch {
+        undoSnapshot = previous;
+        document.getElementById('undoBtn').hidden = false;
+        setStatus('Undo failed', 'error');
       } finally {
         busy = false;
       }
@@ -573,6 +624,7 @@
       void toggleItem(row.dataset.id, row.dataset.done !== 'true');
     });
 
+    document.getElementById('undoBtn').addEventListener('click', () => void undoLast());
     document.getElementById('clearDone').addEventListener('click', () => void clearDone());
     document.getElementById('openSettings').addEventListener('click', openSettings);
     document.getElementById('setupBtn').addEventListener('click', openSettings);
