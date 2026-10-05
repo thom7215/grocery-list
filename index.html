@@ -1139,8 +1139,8 @@
       const select = document.getElementById('aislePick');
       const store = activeStore();
       const names = store ? aisleNames(store).all : [];
-      if (pendingAisle && !names.includes(pendingAisle)) pendingAisle = '';
-      select.innerHTML = [`<option value="">Uncategorized</option>`]
+      if (pendingAisle && pendingAisle !== '__none__' && !names.includes(pendingAisle)) pendingAisle = '';
+      select.innerHTML = [`<option value="">Choose aisle</option>`, `<option value="__none__">Uncategorized</option>`]
         .concat(names.map(name => `<option value="${esc(name)}">${esc(name)}</option>`))
         .concat(`<option value="__new__">New aisle…</option>`)
         .join('');
@@ -1317,12 +1317,19 @@
 
     document.getElementById('deleteStore').addEventListener('click', () => void deleteStore());
 
+    function aisleFromPick(value) {
+      return !value || value === '__none__' ? '' : value;
+    }
+
     function addTypedItem(aisle) {
       const input = document.getElementById('newItem');
       const text = input.value;
-      if (!text.trim()) return;
+      if (!text.trim()) return false;
       input.value = '';
+      pendingAisle = '';
+      renderAislePick();
       void addItem(text, aisle);
+      return true;
     }
 
     document.getElementById('aislePick').addEventListener('change', () => {
@@ -1334,13 +1341,14 @@
           renderAislePick();
           return;
         }
-        pendingAisle = trimmed;
-        if (document.getElementById('newItem').value.trim()) addTypedItem(trimmed);
-        else void createAisle(trimmed);
+        if (!addTypedItem(trimmed)) {
+          pendingAisle = trimmed;
+          void createAisle(trimmed);
+        }
         return;
       }
-      pendingAisle = value;
-      addTypedItem(value);
+      const aisle = aisleFromPick(value);
+      if (!addTypedItem(aisle)) pendingAisle = value;
     });
 
     document.getElementById('addAisleBtn').addEventListener('click', () => {
@@ -1413,8 +1421,11 @@
       const input = document.getElementById('newItem');
       const text = input.value;
       if (!text.trim()) return;
+      const aisle = aisleFromPick(pendingAisle);
       input.value = '';
-      void addItem(text, pendingAisle);
+      pendingAisle = '';
+      renderAislePick();
+      void addItem(text, aisle);
     });
 
     document.getElementById('list').addEventListener('click', (e) => {
