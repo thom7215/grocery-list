@@ -31,7 +31,7 @@ The worker migrates your existing flat grocery list into a **General** store aut
 - **Rename store** / **Delete store** buttons appear below the tabs
 - Tap a row to check it off · **×** to delete · **Undo** reverses your last change
 - Choose an aisle when you add an item, or tap **Add aisle**. Drag the grip to reorder items or aisle groups
-- Star an item, or tap **Add staple**, then tap a staple to add it again. Each store keeps its own staples
+- Star an item, or open **Staples** and tap **Add staple**. Open the dropdown and tap a staple to add it again. Each store keeps its own staples
 
 ## TV dashboard note
 
