@@ -125,12 +125,14 @@
 
     .add-bar {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.5rem;
-      margin-bottom: 1rem;
+      margin-bottom: 0.85rem;
     }
 
     .add-bar input {
-      flex: 1;
+      flex: 1 1 140px;
+      min-width: 0;
       padding: 0.85rem 1rem;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -139,7 +141,18 @@
       font-size: 1rem;
     }
 
-    .add-bar input:focus {
+    .add-bar select {
+      flex: 1 1 7.5rem;
+      min-width: 0;
+      padding: 0.85rem 0.65rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 0.92rem;
+    }
+
+    .add-bar input:focus, .add-bar select:focus {
       outline: none;
       border-color: var(--accent);
     }
@@ -206,11 +219,148 @@
       gap: 0.45rem;
     }
 
+    .staples {
+      margin-bottom: 0.85rem;
+    }
+
+    .staples-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.45rem;
+    }
+
+    .staple-row {
+      display: flex;
+      gap: 0.4rem;
+      overflow-x: auto;
+      padding-bottom: 0.15rem;
+      scrollbar-width: none;
+    }
+
+    .staple-row::-webkit-scrollbar { display: none; }
+
+    .staple {
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .staple.on-list { opacity: 0.5; }
+
+    .staple-chip, .staple-remove {
+      background: none;
+      border: none;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.88rem;
+    }
+
+    .staple-chip { padding: 0.4rem 0.15rem 0.4rem 0.75rem; font-weight: 600; }
+    .staple-remove { color: var(--muted); padding: 0.4rem 0.65rem 0.4rem 0.25rem; font-size: 1rem; line-height: 1; }
+    .staple-remove:hover { color: var(--danger); }
+    .staple-empty { color: var(--muted); font-size: 0.82rem; font-style: italic; }
+
+    .aisle { margin-bottom: 0.35rem; }
+    .aisle.drop-into { outline: 1px dashed var(--accent); border-radius: 12px; }
+    .aisle.drop-before { box-shadow: inset 0 3px 0 var(--accent); }
+    .aisle.dragging .aisle-items { display: none; }
+    .aisle.dragging { opacity: 0.45; }
+
+    .aisle-head {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin: 0.35rem 0 0.4rem;
+    }
+
+    .aisle-name {
+      flex: 1;
+      text-align: left;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 0.2rem 0;
+    }
+
+    .aisle-name:disabled { cursor: default; }
+
+    .aisle-remove {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0.15rem 0.35rem;
+      line-height: 1;
+    }
+
+    .aisle-remove:hover { color: var(--danger); }
+
+    .aisle-items {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      min-height: 2.4rem;
+    }
+
+    .aisle-empty {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-style: italic;
+      padding: 0.25rem 0.15rem 0.45rem;
+    }
+
+    .checked-block { margin-top: 0.85rem; }
+    .checked-label { margin-bottom: 0.45rem; }
+
+    .drag-handle {
+      appearance: none;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: grab;
+      touch-action: none;
+      font-size: 0.95rem;
+      letter-spacing: -0.2em;
+      padding: 0.35rem 0.2rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .drag-handle:active { cursor: grabbing; }
+
+    .item.dragging { opacity: 0.4; }
+    .item.drop-before { box-shadow: inset 0 3px 0 var(--accent); }
+
+    .staple-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.05rem;
+      cursor: pointer;
+      padding: 0.2rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .staple-btn.on { color: var(--accent); cursor: default; }
+
     .item {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      padding: 0.85rem 0.9rem;
+      gap: 0.55rem;
+      padding: 0.75rem 0.7rem;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -381,19 +531,23 @@
 
     <form class="add-bar" id="addForm">
       <input type="text" id="newItem" placeholder="Add an item…" autocomplete="off" enterkeyhint="done">
+      <select id="aislePick" aria-label="Aisle"></select>
       <button class="btn" type="submit" id="addBtn">Add</button>
     </form>
+
+    <div class="staples" id="staples" hidden></div>
 
     <div class="toolbar">
       <span class="section-label" id="listLabel">Items</span>
       <div class="toolbar-actions">
+        <button class="btn btn-secondary btn-sm" id="addAisleBtn" type="button" hidden>Add aisle</button>
         <button class="btn btn-secondary btn-sm" id="undoBtn" type="button" hidden>Undo</button>
         <button class="btn btn-secondary btn-sm" id="clearDone" type="button" hidden>Clear checked</button>
       </div>
     </div>
 
     <div class="list" id="list"></div>
-    <footer class="footer">Each store has its own list · syncs to your TV dashboard</footer>
+    <footer class="footer">Drag ⋮⋮ to reorder · tap a staple to add it again</footer>
   </div>
 
   <div class="overlay" id="settingsOverlay">
@@ -426,6 +580,9 @@
     let activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY) || '';
     let busy = false;
     let undoSnapshot = null;
+    let pendingAisle = '';
+    let dragState = null;
+    let suppressClick = false;
 
     function loadConfig() {
       try {
@@ -500,6 +657,7 @@
     }
 
     async function loadStores() {
+      if (busy || dragState) return;
       if (!isConfigured()) {
         document.getElementById('setupBanner').hidden = false;
         setStatus('Not connected');
@@ -583,26 +741,228 @@
       }
     }
 
-    async function addItem(text) {
-      const store = activeStore();
-      if (!store || !text.trim() || busy || !isConfigured()) return;
+    function cloneStore(store) {
+      return {
+        ...store,
+        aisles: [...(store.aisles || [])],
+        staples: (store.staples || []).map(s => ({ ...s })),
+        items: (store.items || []).map(i => ({ ...i, aisle: i.aisle || '' })),
+      };
+    }
+
+    function aisleNames(store) {
+      const defined = (store.aisles || []).map(a => String(a).trim()).filter(Boolean);
+      const extras = [];
+      for (const item of store.items || []) {
+        const name = String(item.aisle || '').trim();
+        if (name && !defined.includes(name) && !extras.includes(name)) extras.push(name);
+      }
+      for (const staple of store.staples || []) {
+        const name = String(staple.aisle || '').trim();
+        if (name && !defined.includes(name) && !extras.includes(name)) extras.push(name);
+      }
+      return { defined, extras, all: [...defined, ...extras] };
+    }
+
+    function placeItem(items, item, beforeId) {
+      const next = items.map(i => ({ ...i }));
+      if (beforeId) {
+        const at = next.findIndex(i => String(i.id) === String(beforeId));
+        if (at >= 0) {
+          next.splice(at, 0, item);
+          return next;
+        }
+      }
+      const aisle = item.aisle || '';
+      let at = -1;
+      for (let i = next.length - 1; i >= 0; i--) {
+        if (!next[i].done && (next[i].aisle || '') === aisle) {
+          at = i + 1;
+          break;
+        }
+      }
+      if (at < 0) {
+        const firstDone = next.findIndex(i => i.done);
+        at = firstDone < 0 ? next.length : firstDone;
+      }
+      next.splice(at, 0, item);
+      return next;
+    }
+
+    function reorderItems(items, itemId, toAisle, beforeId) {
+      const current = items.find(i => String(i.id) === String(itemId));
+      if (!current) return items;
+      if (beforeId && String(beforeId) === String(itemId) && (current.aisle || '') === (toAisle || '')) {
+        return items;
+      }
+      const next = items.map(i => ({ ...i }));
+      const from = next.findIndex(i => String(i.id) === String(itemId));
+      const [item] = next.splice(from, 1);
+      item.aisle = toAisle || '';
+      if (beforeId && String(beforeId) !== String(itemId)) {
+        const at = next.findIndex(i => String(i.id) === String(beforeId));
+        if (at >= 0) {
+          next.splice(at, 0, item);
+          return next;
+        }
+      }
+      return placeItem(next, item, null);
+    }
+
+    function reorderAisles(names, name, beforeName) {
+      const next = [...names];
+      const from = next.indexOf(name);
+      if (from < 0) return next;
+      next.splice(from, 1);
+      if (!beforeName) {
+        next.push(name);
+        return next;
+      }
+      const at = next.indexOf(beforeName);
+      if (at < 0) next.push(name);
+      else next.splice(at, 0, name);
+      return next;
+    }
+
+    async function commitStore(nextStore, statusText) {
+      if (busy || !isConfigured()) return;
       busy = true;
-      document.getElementById('addBtn').disabled = true;
       captureUndo();
       try {
-        setStatus('Saving…');
-        const data = await apiFetch(`/api/grocery-stores/${store.id}/items`, {
-          method: 'POST',
-          body: JSON.stringify({ text: text.trim() }),
-        });
-        await applyStores(data.stores || []);
+        if (statusText) setStatus(statusText);
+        const nextStores = stores.map(s => String(s.id) === String(nextStore.id) ? nextStore : s);
+        await saveAllStores(nextStores);
       } catch {
         clearUndo();
-        setStatus('Add failed', 'error');
+        setStatus('Save failed', 'error');
       } finally {
         busy = false;
+      }
+    }
+
+    async function addItem(text, aisle) {
+      const store = activeStore();
+      const trimmed = text.trim();
+      if (!store || !trimmed || busy || !isConfigured()) return;
+      const next = cloneStore(store);
+      const cleanAisle = (aisle || '').trim();
+      if (cleanAisle && !next.aisles.includes(cleanAisle)) next.aisles.push(cleanAisle);
+      next.items = placeItem(next.items, {
+        id: Date.now(),
+        text: trimmed,
+        done: false,
+        aisle: cleanAisle,
+      }, null);
+      document.getElementById('addBtn').disabled = true;
+      try {
+        await commitStore(next, 'Saving…');
+      } finally {
         document.getElementById('addBtn').disabled = false;
       }
+    }
+
+    async function createAisle(name) {
+      const trimmed = name.trim();
+      const store = activeStore();
+      if (!trimmed || !store || busy) {
+        renderAislePick();
+        return;
+      }
+      const existing = aisleNames(store).all.find(a => a.toLowerCase() === trimmed.toLowerCase());
+      pendingAisle = existing || trimmed;
+      if (existing) {
+        renderAislePick();
+        return;
+      }
+      const next = cloneStore(store);
+      next.aisles.push(trimmed);
+      await commitStore(next, 'Saving…');
+    }
+
+    async function renameAisle(oldName) {
+      const store = activeStore();
+      if (!store || busy) return;
+      const name = prompt('Rename aisle:', oldName);
+      const trimmed = name?.trim() || '';
+      if (!trimmed || trimmed === oldName) return;
+      if (aisleNames(store).all.some(a => a.toLowerCase() === trimmed.toLowerCase() && a !== oldName)) return;
+      const next = cloneStore(store);
+      next.aisles = aisleNames(store).all.map(a => a === oldName ? trimmed : a);
+      next.items = next.items.map(i => (i.aisle || '') === oldName ? { ...i, aisle: trimmed } : i);
+      next.staples = next.staples.map(s => (s.aisle || '') === oldName ? { ...s, aisle: trimmed } : s);
+      if (pendingAisle === oldName) pendingAisle = trimmed;
+      await commitStore(next, 'Saving…');
+    }
+
+    async function deleteAisle(name) {
+      const store = activeStore();
+      if (!store || busy) return;
+      if (!confirm(`Remove the "${name}" aisle? Items stay on the list.`)) return;
+      const next = cloneStore(store);
+      next.aisles = aisleNames(store).all.filter(a => a !== name);
+      next.items = next.items.map(i => (i.aisle || '') === name ? { ...i, aisle: '' } : i);
+      next.staples = next.staples.map(s => (s.aisle || '') === name ? { ...s, aisle: '' } : s);
+      if (pendingAisle === name) pendingAisle = '';
+      await commitStore(next, 'Saving…');
+    }
+
+    async function createStaple(text, aisle) {
+      const trimmed = text.trim();
+      const store = activeStore();
+      if (!store || !trimmed || busy) return;
+      const next = cloneStore(store);
+      if (next.staples.some(s => s.text.toLowerCase() === trimmed.toLowerCase())) return;
+      const cleanAisle = (aisle || '').trim();
+      if (cleanAisle && !next.aisles.some(a => a.toLowerCase() === cleanAisle.toLowerCase())) {
+        next.aisles.push(cleanAisle);
+      }
+      next.staples.push({
+        id: String(Date.now()) + Math.random().toString(36).slice(2, 6),
+        text: trimmed,
+        aisle: cleanAisle,
+      });
+      await commitStore(next, 'Saving…');
+    }
+
+    async function removeStaple(id) {
+      const store = activeStore();
+      if (!store || busy) return;
+      const next = cloneStore(store);
+      next.staples = next.staples.filter(s => String(s.id) !== String(id));
+      await commitStore(next, 'Saving…');
+    }
+
+    async function addStapleToList(stapleId) {
+      const store = activeStore();
+      if (!store || busy) return;
+      const staple = (store.staples || []).find(s => String(s.id) === String(stapleId));
+      if (!staple) return;
+      const next = cloneStore(store);
+      const existing = next.items.find(i => i.text.toLowerCase() === staple.text.toLowerCase());
+      if (existing && !existing.done) return;
+      const cleanAisle = staple.aisle || '';
+      if (cleanAisle && !next.aisles.includes(cleanAisle)) next.aisles.push(cleanAisle);
+      if (existing) {
+        next.items = next.items.filter(i => String(i.id) !== String(existing.id));
+        existing.done = false;
+        existing.aisle = cleanAisle;
+        next.items = placeItem(next.items, existing, null);
+      } else {
+        next.items = placeItem(next.items, {
+          id: Date.now(),
+          text: staple.text,
+          done: false,
+          aisle: cleanAisle,
+        }, null);
+      }
+      await commitStore(next, 'Saving…');
+    }
+
+    async function saveItemAsStaple(itemId) {
+      const store = activeStore();
+      const item = (store?.items || []).find(i => String(i.id) === String(itemId));
+      if (!item) return;
+      await createStaple(item.text, item.aisle || '');
     }
 
     async function toggleItem(id, done) {
@@ -683,6 +1043,7 @@
         el.innerHTML = '';
         document.getElementById('renameStore').hidden = true;
         document.getElementById('deleteStore').hidden = true;
+        document.getElementById('addAisleBtn').hidden = true;
         return;
       }
 
@@ -694,6 +1055,84 @@
 
       document.getElementById('renameStore').hidden = false;
       document.getElementById('deleteStore').hidden = stores.length <= 1;
+      document.getElementById('addAisleBtn').hidden = false;
+    }
+
+    function renderAislePick() {
+      const select = document.getElementById('aislePick');
+      const store = activeStore();
+      const names = store ? aisleNames(store).all : [];
+      if (pendingAisle && !names.includes(pendingAisle)) pendingAisle = '';
+      select.innerHTML = [`<option value="">No aisle</option>`]
+        .concat(names.map(name => `<option value="${esc(name)}">${esc(name)}</option>`))
+        .concat(`<option value="__new__">New aisle…</option>`)
+        .join('');
+      select.value = pendingAisle;
+    }
+
+    function renderStaples() {
+      const el = document.getElementById('staples');
+      const store = activeStore();
+      if (!store) {
+        el.hidden = true;
+        el.innerHTML = '';
+        return;
+      }
+      el.hidden = false;
+      const staples = store.staples || [];
+      const activeText = new Set(
+        (store.items || []).filter(i => !i.done).map(i => i.text.toLowerCase()),
+      );
+      const chips = staples.map(staple => {
+        const onList = activeText.has(staple.text.toLowerCase());
+        const aisle = staple.aisle ? ` · ${esc(staple.aisle)}` : '';
+        return `<span class="staple${onList ? ' on-list' : ''}">
+          <button type="button" class="staple-chip" data-staple-id="${esc(String(staple.id))}">${esc(staple.text)}${aisle}</button>
+          <button type="button" class="staple-remove" data-remove-staple="${esc(String(staple.id))}" aria-label="Remove staple ${esc(staple.text)}">&times;</button>
+        </span>`;
+      }).join('');
+      el.innerHTML = `
+        <div class="staples-head">
+          <span class="section-label">Staples</span>
+          <button type="button" class="btn btn-secondary btn-sm" id="addStapleBtn">Add staple</button>
+        </div>
+        <div class="staple-row">${chips || '<span class="staple-empty">Save items you buy often, then tap them to add.</span>'}</div>`;
+    }
+
+    function renderItem(item, staples) {
+      const starred = staples.some(s => s.text.toLowerCase() === item.text.toLowerCase());
+      const id = esc(String(item.id));
+      return `<div class="item${item.done ? ' done' : ''}" data-id="${id}" data-done="${item.done ? 'true' : 'false'}" data-aisle="${esc(item.aisle || '')}">
+        ${item.done ? '' : `<button type="button" class="drag-handle" data-drag="item" aria-label="Drag to reorder ${esc(item.text)}">⋮⋮</button>`}
+        <input type="checkbox" ${item.done ? 'checked' : ''} tabindex="-1" aria-hidden="true">
+        <span class="item-text">${esc(item.text)}</span>
+        ${item.done ? '' : `<button type="button" class="staple-btn${starred ? ' on' : ''}" data-save-staple="${id}" aria-label="${starred ? `${esc(item.text)} is a staple` : `Save ${esc(item.text)} as a staple`}" ${starred ? 'disabled' : ''}>${starred ? '★' : '☆'}</button>`}
+        <button class="delete-btn" type="button" data-delete="${id}" aria-label="Remove ${esc(item.text)}">&times;</button>
+      </div>`;
+    }
+
+    function renderAisleSection(name, label, items, staples, movable) {
+      const body = items.length
+        ? items.map(item => renderItem(item, staples)).join('')
+        : '<div class="aisle-empty">Nothing in this aisle</div>';
+      return `<section class="aisle" data-aisle="${esc(name)}">
+        <div class="aisle-head">
+          ${movable ? `<button type="button" class="drag-handle" data-drag="aisle" aria-label="Reorder ${esc(label)} aisle">⋮⋮</button>` : ''}
+          ${movable
+            ? `<button type="button" class="aisle-name" data-rename-aisle="${esc(name)}">${esc(label)}</button>
+               <button type="button" class="aisle-remove" data-delete-aisle="${esc(name)}" aria-label="Remove ${esc(label)} aisle">&times;</button>`
+            : `<span class="aisle-name">${esc(label)}</span>`}
+        </div>
+        <div class="aisle-items">${body}</div>
+      </section>`;
+    }
+
+    function renderDone(done, staples) {
+      if (!done.length) return '';
+      return `<section class="checked-block">
+        <div class="section-label checked-label">Checked</div>
+        <div class="aisle-items">${done.map(item => renderItem(item, staples)).join('')}</div>
+      </section>`;
     }
 
     function renderList() {
@@ -703,6 +1142,7 @@
       const items = store?.items || [];
       const active = items.filter(i => !i.done);
       const done = items.filter(i => i.done);
+      const staples = store?.staples || [];
 
       document.getElementById('listLabel').textContent = store
         ? `${active.length} to buy${done.length ? ` · ${done.length} checked` : ''}`
@@ -715,23 +1155,35 @@
         return;
       }
 
-      if (!items.length) {
+      const names = aisleNames(store);
+      if (!items.length && !names.defined.length) {
         el.innerHTML = `<div class="empty">Nothing on the ${esc(store.name)} list yet.</div>`;
         return;
       }
 
-      const renderRow = (item) => `
-        <div class="item${item.done ? ' done' : ''}" data-id="${item.id}" data-done="${item.done}">
-          <input type="checkbox" ${item.done ? 'checked' : ''} tabindex="-1" aria-hidden="true">
-          <span class="item-text">${esc(item.text)}</span>
-          <button class="delete-btn" type="button" data-delete="${item.id}" aria-label="Remove ${esc(item.text)}">&times;</button>
-        </div>`;
+      if (!names.all.length) {
+        el.innerHTML = `<section class="aisle" data-aisle=""><div class="aisle-items">${active.map(item => renderItem(item, staples)).join('')}</div></section>${renderDone(done, staples)}`;
+        return;
+      }
 
-      el.innerHTML = [...active, ...done].map(renderRow).join('');
+      const buckets = new Map(names.all.map(name => [name, []]));
+      const other = [];
+      for (const item of active) {
+        const aisle = String(item.aisle || '').trim();
+        if (aisle && buckets.has(aisle)) buckets.get(aisle).push(item);
+        else other.push(item);
+      }
+
+      let html = names.all.map(name => renderAisleSection(name, name, buckets.get(name) || [], staples, true)).join('');
+      if (other.length) html += renderAisleSection('', 'Other', other, staples, false);
+      html += renderDone(done, staples);
+      el.innerHTML = html;
     }
 
     function render() {
       renderStoreTabs();
+      renderAislePick();
+      renderStaples();
       renderList();
     }
 
@@ -767,15 +1219,70 @@
 
     document.getElementById('deleteStore').addEventListener('click', () => void deleteStore());
 
+    document.getElementById('aislePick').addEventListener('change', () => {
+      const value = document.getElementById('aislePick').value;
+      if (value !== '__new__') {
+        pendingAisle = value;
+        return;
+      }
+      const name = prompt('Aisle name (e.g. Produce, Dairy):');
+      if (name && name.trim()) void createAisle(name);
+      else {
+        pendingAisle = pendingAisle === '__new__' ? '' : pendingAisle;
+        renderAislePick();
+      }
+    });
+
+    document.getElementById('addAisleBtn').addEventListener('click', () => {
+      const name = prompt('Aisle name (e.g. Produce, Dairy):');
+      if (name) void createAisle(name);
+    });
+
+    document.getElementById('staples').addEventListener('click', (e) => {
+      if (e.target.id === 'addStapleBtn') {
+        const name = prompt('Staple name (e.g. Milk, Eggs):');
+        if (name) void createStaple(name, pendingAisle);
+        return;
+      }
+      const remove = e.target.closest('[data-remove-staple]');
+      if (remove) {
+        void removeStaple(remove.dataset.removeStaple);
+        return;
+      }
+      const chip = e.target.closest('[data-staple-id]');
+      if (chip) void addStapleToList(chip.dataset.stapleId);
+    });
+
     document.getElementById('addForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const input = document.getElementById('newItem');
       const text = input.value;
+      if (!text.trim()) return;
       input.value = '';
-      void addItem(text);
+      void addItem(text, pendingAisle);
     });
 
     document.getElementById('list').addEventListener('click', (e) => {
+      if (suppressClick) {
+        suppressClick = false;
+        return;
+      }
+      const rename = e.target.closest('[data-rename-aisle]');
+      if (rename) {
+        void renameAisle(rename.dataset.renameAisle);
+        return;
+      }
+      const deleteAisleBtn = e.target.closest('[data-delete-aisle]');
+      if (deleteAisleBtn) {
+        void deleteAisle(deleteAisleBtn.dataset.deleteAisle);
+        return;
+      }
+      const saveStaple = e.target.closest('[data-save-staple]');
+      if (saveStaple) {
+        void saveItemAsStaple(saveStaple.dataset.saveStaple);
+        return;
+      }
+      if (e.target.closest('.drag-handle')) return;
       const deleteBtn = e.target.closest('.delete-btn');
       if (deleteBtn) {
         e.stopPropagation();
@@ -786,6 +1293,142 @@
       const row = e.target.closest('.item[data-id]');
       if (!row) return;
       void toggleItem(row.dataset.id, row.dataset.done !== 'true');
+    });
+
+    function attrSel(attr, value) {
+      const safe = String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      return `[${attr}="${safe}"]`;
+    }
+
+    function clearDragStyles() {
+      document.querySelectorAll('.dragging, .drop-before, .drop-into').forEach(el => {
+        el.classList.remove('dragging', 'drop-before', 'drop-into');
+      });
+    }
+
+    function findDrop(clientY) {
+      if (!dragState) return null;
+      if (dragState.kind === 'aisle') {
+        const sections = [...document.querySelectorAll('.aisle')].filter(el => el.dataset.aisle && el.dataset.aisle !== dragState.aisleName);
+        for (const section of sections) {
+          const rect = section.getBoundingClientRect();
+          if (clientY < rect.top + rect.height / 2) return { type: 'aisle', beforeName: section.dataset.aisle };
+        }
+        return sections.length ? { type: 'aisle', beforeName: '' } : null;
+      }
+
+      const sections = [...document.querySelectorAll('#list .aisle')];
+      if (!sections.length) return null;
+      const section = sections.find(el => {
+        const rect = el.getBoundingClientRect();
+        return clientY >= rect.top && clientY <= rect.bottom;
+      });
+      if (!section) {
+        const first = sections[0].getBoundingClientRect();
+        if (clientY < first.top) {
+          const firstRow = [...sections[0].querySelectorAll('.item:not(.done)')].find(el => el.dataset.id !== dragState.itemId);
+          return { type: 'item', aisle: sections[0].dataset.aisle || '', beforeId: firstRow?.dataset.id || '' };
+        }
+        return null;
+      }
+      const rows = [...section.querySelectorAll('.item:not(.done)')].filter(el => el.dataset.id !== dragState.itemId);
+      for (const row of rows) {
+        const rect = row.getBoundingClientRect();
+        if (clientY < rect.top + rect.height / 2) {
+          return { type: 'item', aisle: section.dataset.aisle || '', beforeId: row.dataset.id };
+        }
+      }
+      return { type: 'item', aisle: section.dataset.aisle || '', beforeId: '' };
+    }
+
+    function applyDragHint() {
+      clearDragStyles();
+      if (!dragState) return;
+      const origin = dragState.kind === 'item'
+        ? document.querySelector(`#list .item${attrSel('data-id', dragState.itemId)}`)
+        : document.querySelector(`#list .aisle${attrSel('data-aisle', dragState.aisleName)}`);
+      origin?.classList.add('dragging');
+      const hint = dragState.hint;
+      if (!hint) return;
+      if (hint.type === 'item' && hint.beforeId) {
+        document.querySelector(`#list .item${attrSel('data-id', hint.beforeId)}`)?.classList.add('drop-before');
+      } else if (hint.type === 'item') {
+        document.querySelector(`#list .aisle${attrSel('data-aisle', hint.aisle)}`)?.classList.add('drop-into');
+      } else if (hint.beforeName) {
+        document.querySelector(`#list .aisle${attrSel('data-aisle', hint.beforeName)}`)?.classList.add('drop-before');
+      } else {
+        const sections = [...document.querySelectorAll('#list .aisle')].filter(el => el.dataset.aisle);
+        sections[sections.length - 1]?.classList.add('drop-into');
+      }
+    }
+
+    async function finishDrag(commit) {
+      const state = dragState;
+      dragState = null;
+      clearDragStyles();
+      if (!commit || !state?.moved || !state.hint) return;
+      const store = activeStore();
+      if (!store) return;
+      const next = cloneStore(store);
+      if (state.kind === 'item') {
+        const items = reorderItems(next.items, state.itemId, state.hint.aisle, state.hint.beforeId || null);
+        if (JSON.stringify(items) === JSON.stringify(next.items)) return;
+        next.items = items;
+      } else {
+        const before = aisleNames(store).all;
+        const aisles = reorderAisles(before, state.aisleName, state.hint.beforeName || null);
+        if (JSON.stringify(aisles) === JSON.stringify(before)) return;
+        next.aisles = aisles;
+      }
+      await commitStore(next);
+    }
+
+    function onDragPointerDown(e) {
+      const handle = e.target.closest('.drag-handle');
+      if (!handle || busy) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      const item = handle.closest('.item');
+      const aisle = handle.closest('.aisle');
+      dragState = {
+        pointerId: e.pointerId,
+        kind: handle.dataset.drag,
+        itemId: item?.dataset.id || '',
+        aisleName: aisle?.dataset.aisle || '',
+        startY: e.clientY,
+        moved: false,
+        hint: null,
+      };
+      try { handle.setPointerCapture(e.pointerId); } catch { /* untrusted events still drag via bubbling */ }
+    }
+
+    function onDragPointerMove(e) {
+      if (!dragState || e.pointerId !== dragState.pointerId) return;
+      if (!dragState.moved && Math.abs(e.clientY - dragState.startY) < 8) return;
+      dragState.moved = true;
+      e.preventDefault();
+      if (e.clientY < 72) window.scrollBy(0, -12);
+      else if (e.clientY > window.innerHeight - 72) window.scrollBy(0, 12);
+      dragState.hint = findDrop(e.clientY);
+      applyDragHint();
+    }
+
+    function onDragPointerUp(e) {
+      if (!dragState || e.pointerId !== dragState.pointerId) return;
+      const moved = dragState.moved;
+      if (moved) {
+        suppressClick = true;
+        setTimeout(() => { suppressClick = false; }, 400);
+      }
+      void finishDrag(moved);
+    }
+
+    const listEl = document.getElementById('list');
+    listEl.addEventListener('pointerdown', onDragPointerDown);
+    listEl.addEventListener('pointermove', onDragPointerMove, { passive: false });
+    listEl.addEventListener('pointerup', onDragPointerUp);
+    listEl.addEventListener('pointercancel', (e) => {
+      if (!dragState || e.pointerId !== dragState.pointerId) return;
+      void finishDrag(false);
     });
 
     document.getElementById('undoBtn').addEventListener('click', () => void undoLast());

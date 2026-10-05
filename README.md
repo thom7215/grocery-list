@@ -1,29 +1,41 @@
 # Family Grocery List
 
-A simple mobile-friendly app for your family to add, check off, and remove grocery items. Changes sync to the **Family Dashboard** on your TV via the same Cloudflare Worker.
+Mobile-friendly grocery lists with **separate lists per store** (Costco, Walmart, etc.). Syncs to your Family Dashboard TV via Cloudflare.
 
-## Setup
+## Deploy to GitHub Pages
 
-1. Create a new GitHub repo (e.g. `thom7215/grocery-list`) and upload these files.
-2. Enable **GitHub Pages** (Settings → Pages → Source: GitHub Actions).
-3. Push to `main` — the workflow deploys automatically.
+1. Create repo `grocery-list` on GitHub
+2. Upload `index.html`
+3. **Settings → Pages → Source:** Deploy from branch → `main` → `/ (root)`
+4. Live at `https://YOUR_USERNAME.github.io/grocery-list/`
 
-Your app will be at: `https://thom7215.github.io/grocery-list/`
+## Update Cloudflare Worker (required for store tabs)
 
-## Connect to Cloudflare
+1. Open [Cloudflare Workers](https://dash.cloudflare.com) → **family-dashboard-api**
+2. Replace all code with `worker/index.js` from this folder
+3. Deploy
 
-1. Open the app on your phone or computer.
-2. Tap **⚙ Settings**.
-3. Enter:
-   - **Cloud API URL:** `https://family-dashboard-api.thom7215.workers.dev`
-   - **Family password:** same as your dashboard / `FAMILY_TOKEN` in Cloudflare
-4. Tap **Save & sync**.
+The worker migrates your existing flat grocery list into a **General** store automatically.
 
-Everyone in the family can bookmark the app and use the same password.
+## App setup
 
-## Update the Cloudflare Worker
+1. Open the app → **⚙ Settings**
+2. **Cloud API URL:** `https://family-dashboard-api.thom7215.workers.dev`
+3. **Family password:** your household password
+4. Tap **Save & sync**
 
-The worker needs a small update to support deleting items. In the Cloudflare dashboard, open your `family-dashboard-api` worker and paste the latest code from `family-dashboard/worker/src/index.js` (includes `DELETE /api/groceries/:id`).
+## Using store tabs
+
+- Tap a store tab to switch lists
+- Tap **+** to add a new store
+- **Rename store** / **Delete store** buttons appear below the tabs
+- Tap a row to check it off · **×** to delete · **Undo** reverses your last change
+- Choose an aisle when you add an item, or tap **Add aisle**. Drag the grip to reorder items or aisle groups
+- Star an item, or tap **Add staple**, then tap a staple to add it again. Each store keeps its own staples
+
+## TV dashboard note
+
+The dashboard still shows groceries from all stores (each item includes its store name after you update the dashboard). If you want store sections on the TV, update `family-dashboard/index.html` to group by `storeName` from the API.
 
 ## Local testing
 
