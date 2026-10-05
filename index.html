@@ -874,16 +874,12 @@
         }
       }
       const aisle = item.aisle || '';
-      let at = -1;
+      let at = next.length;
       for (let i = next.length - 1; i >= 0; i--) {
-        if (!next[i].done && (next[i].aisle || '') === aisle) {
+        if ((next[i].aisle || '') === aisle) {
           at = i + 1;
           break;
         }
-      }
-      if (at < 0) {
-        const firstDone = next.findIndex(i => i.done);
-        at = firstDone < 0 ? next.length : firstDone;
       }
       next.splice(at, 0, item);
       return next;
@@ -1273,14 +1269,6 @@
       </section>`;
     }
 
-    function renderDone(done, staples) {
-      if (!done.length) return '';
-      return `<section class="checked-block">
-        <div class="section-label checked-label">Checked</div>
-        <div class="aisle-items">${done.map(item => renderItem(item, staples)).join('')}</div>
-      </section>`;
-    }
-
     function renderList() {
       const el = document.getElementById('list');
       const clearBtn = document.getElementById('clearDone');
@@ -1309,7 +1297,7 @@
       const order = aisleNames(store).order;
       const buckets = new Map();
       const uncategorized = [];
-      for (const item of active) {
+      for (const item of items) {
         const aisle = String(item.aisle || '').trim();
         if (!aisle) uncategorized.push(item);
         else {
@@ -1318,13 +1306,11 @@
         }
       }
 
-      let html = order.map(name => {
+      el.innerHTML = order.map(name => {
         const list = name ? (buckets.get(name) || []) : uncategorized;
         if (!list.length) return '';
         return renderAisleSection(name, name || 'Uncategorized', list, staples);
       }).join('');
-      html += renderDone(done, staples);
-      el.innerHTML = html;
     }
 
     function render() {
