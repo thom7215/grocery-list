@@ -260,9 +260,35 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       box-shadow: var(--shadow);
-      max-height: 16rem;
+      max-height: 22rem;
       overflow: auto;
       padding: 0.35rem;
+    }
+
+    .staple-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      padding: 0.55rem 0.35rem 0.35rem;
+      border-top: 1px solid var(--border);
+      margin-top: 0.25rem;
+    }
+
+    .staple-form input,
+    .staple-form select {
+      width: 100%;
+      background: var(--bg-accent);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.55rem 0.65rem;
+      font-size: 0.92rem;
+    }
+
+    .staple-form input:focus,
+    .staple-form select:focus {
+      outline: none;
+      border-color: var(--accent);
     }
 
     .staple {
@@ -300,12 +326,11 @@
 
     .staple-add {
       width: 100%;
-      text-align: left;
-      padding: 0.7rem;
+      text-align: center;
+      padding: 0.65rem;
       color: var(--accent);
       font-weight: 700;
-      border-top: 1px solid var(--border);
-      margin-top: 0.25rem;
+      border-radius: 8px;
     }
 
     .staple-empty {
@@ -633,6 +658,8 @@
     let dragState = null;
     let suppressClick = false;
     let staplesOpen = false;
+    let stapleDraft = '';
+    let stapleAisle = '';
 
     function loadConfig() {
       try {
@@ -1135,13 +1162,19 @@
       );
       const options = staples.map(staple => {
         const onList = activeText.has(staple.text.toLowerCase());
-        const aisle = staple.aisle ? ` · ${esc(staple.aisle)}` : '';
+        const aisleName = String(staple.aisle || '').trim() || 'Uncategorized';
         const note = onList ? ' · on list' : '';
         return `<div class="staple${onList ? ' on-list' : ''}" role="option">
-          <button type="button" class="staple-chip" data-staple-id="${esc(String(staple.id))}">${esc(staple.text)}${aisle}${note}</button>
+          <button type="button" class="staple-chip" data-staple-id="${esc(String(staple.id))}">${esc(staple.text)} · ${esc(aisleName)}${note}</button>
           <button type="button" class="staple-remove" data-remove-staple="${esc(String(staple.id))}" aria-label="Remove staple ${esc(staple.text)}">&times;</button>
         </div>`;
       }).join('');
+      const aisleChoices = store ? aisleNames(store).all : [];
+      if (stapleAisle && !aisleChoices.includes(stapleAisle)) aisleChoices.push(stapleAisle);
+      const aisleOptions = [`<option value="">Uncategorized</option>`]
+        .concat(aisleChoices.map(name => `<option value="${esc(name)}">${esc(name)}</option>`))
+        .concat(`<option value="__new__">New aisle…</option>`)
+        .join('');
       el.innerHTML = `
         <div class="staple-menu">
           <button type="button" class="staple-toggle" id="stapleToggle" aria-expanded="${staplesOpen ? 'true' : 'false'}" aria-haspopup="listbox">
@@ -1149,10 +1182,16 @@
             <span class="staple-caret" aria-hidden="true">${staplesOpen ? '▴' : '▾'}</span>
           </button>
           <div class="staple-panel" id="staplePanel" role="listbox" aria-label="Staples" ${staplesOpen ? '' : 'hidden'}>
-            ${options || '<div class="staple-empty">No staples yet. Star an item or add one.</div>'}
-            <button type="button" class="staple-add" id="addStapleBtn">Add staple</button>
+            ${options || '<div class="staple-empty">No staples yet. Add one below.</div>'}
+            <form class="staple-form" id="stapleForm">
+              <input type="text" id="stapleName" placeholder="Staple name" autocomplete="off" value="${esc(stapleDraft)}">
+              <select id="stapleAisle" aria-label="Staple aisle">${aisleOptions}</select>
+              <button type="submit" class="staple-add">Add staple</button>
+            </form>
           </div>
         </div>`;
+      const aisleSelect = document.getElementById('stapleAisle');
+      if (aisleSelect) aisleSelect.value = aisleChoices.includes(stapleAisle) || stapleAisle === '' ? stapleAisle : '';
     }
 
     function renderItem(item, staples) {
@@ -1309,19 +1348,38 @@
       if (name) void createAisle(name);
     });
 
+    document.getElementById('staples').addEventListener('input', (e) => {
+      if (e.target.id === 'stapleName') stapleDraft = e.target.value;
+    });
+
+    document.getElementById('staples').addEventListener('change', (e) => {
+      if (e.target.id !== 'stapleAisle') return;
+      if (e.target.value !== '__new__') {
+        stapleAisle = e.target.value;
+        return;
+      }
+      const name = prompt('Aisle name (e.g. Produce, Dairy):');
+      const trimmed = name?.trim() || '';
+      stapleAisle = trimmed;
+      renderStaples();
+    });
+
+    document.getElementById('staples').addEventListener('submit', (e) => {
+      if (e.target.id !== 'stapleForm') return;
+      e.preventDefault();
+      const name = document.getElementById('stapleName').value;
+      const aisle = document.getElementById('stapleAisle').value;
+      if (!name.trim() || aisle === '__new__') return;
+      staplesOpen = true;
+      stapleDraft = '';
+      void createStaple(name, aisle);
+    });
+
     document.getElementById('staples').addEventListener('click', (e) => {
       e.stopPropagation();
       if (e.target.id === 'stapleToggle') {
         staplesOpen = !staplesOpen;
         renderStaples();
-        return;
-      }
-      if (e.target.id === 'addStapleBtn') {
-        const name = prompt('Staple name (e.g. Milk, Eggs):');
-        if (name) {
-          staplesOpen = true;
-          void createStaple(name, pendingAisle);
-        }
         return;
       }
       const remove = e.target.closest('[data-remove-staple]');
