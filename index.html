@@ -333,6 +333,15 @@
       border-radius: 8px;
     }
 
+    .staple-group-name {
+      padding: 0.45rem 0.7rem 0.15rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
     .staple-empty {
       color: var(--muted);
       font-size: 0.85rem;
@@ -1135,15 +1144,24 @@
       document.getElementById('addAisleBtn').hidden = false;
     }
 
-    function renderAislePick() {
-      const select = document.getElementById('aislePick');
-      const store = activeStore();
-      const names = store ? aisleNames(store).all : [];
-      if (pendingAisle && pendingAisle !== '__none__' && !names.includes(pendingAisle)) pendingAisle = '';
-      select.innerHTML = [`<option value="">Choose aisle</option>`, `<option value="__none__">Uncategorized</option>`]
-        .concat(names.map(name => `<option value="${esc(name)}">${esc(name)}</option>`))
+    function aisleChoices(extra) {
+      const names = activeStore() ? [...aisleNames(activeStore()).all] : [];
+      if (extra && extra !== '__none__' && !names.includes(extra)) names.push(extra);
+      return names;
+    }
+
+    function aisleOptionsHtml(extra) {
+      return [`<option value="">Choose aisle</option>`, `<option value="__none__">Uncategorized</option>`]
+        .concat(aisleChoices(extra).map(name => `<option value="${esc(name)}">${esc(name)}</option>`))
         .concat(`<option value="__new__">New aisle…</option>`)
         .join('');
+    }
+
+    function renderAislePick() {
+      const select = document.getElementById('aislePick');
+      const names = aisleChoices();
+      if (pendingAisle && pendingAisle !== '__none__' && !names.includes(pendingAisle)) pendingAisle = '';
+      select.innerHTML = aisleOptionsHtml();
       select.value = pendingAisle;
     }
 
@@ -1160,21 +1178,29 @@
       const activeText = new Set(
         (store.items || []).filter(i => !i.done).map(i => i.text.toLowerCase()),
       );
-      const options = staples.map(staple => {
+      const stapleRow = (staple) => {
         const onList = activeText.has(staple.text.toLowerCase());
-        const aisleName = String(staple.aisle || '').trim() || 'Uncategorized';
         const note = onList ? ' · on list' : '';
         return `<div class="staple${onList ? ' on-list' : ''}" role="option">
-          <button type="button" class="staple-chip" data-staple-id="${esc(String(staple.id))}">${esc(staple.text)} · ${esc(aisleName)}${note}</button>
+          <button type="button" class="staple-chip" data-staple-id="${esc(String(staple.id))}">${esc(staple.text)}${note}</button>
           <button type="button" class="staple-remove" data-remove-staple="${esc(String(staple.id))}" aria-label="Remove staple ${esc(staple.text)}">&times;</button>
         </div>`;
-      }).join('');
-      const aisleChoices = store ? aisleNames(store).all : [];
-      if (stapleAisle && !aisleChoices.includes(stapleAisle)) aisleChoices.push(stapleAisle);
-      const aisleOptions = [`<option value="">Uncategorized</option>`]
-        .concat(aisleChoices.map(name => `<option value="${esc(name)}">${esc(name)}</option>`))
-        .concat(`<option value="__new__">New aisle…</option>`)
-        .join('');
+      };
+      const grouped = new Map(aisleChoices(stapleAisle).map(name => [name, []]));
+      const uncategorized = [];
+      for (const staple of staples) {
+        const aisle = String(staple.aisle || '').trim();
+        if (!aisle) uncategorized.push(staple);
+        else {
+          if (!grouped.has(aisle)) grouped.set(aisle, []);
+          grouped.get(aisle).push(staple);
+        }
+      }
+      const sections = [`<div class="staple-group-name">Uncategorized</div>${uncategorized.map(stapleRow).join('')}`];
+      for (const [name, list] of grouped) {
+        sections.push(`<div class="staple-group-name">${esc(name)}</div>${list.map(stapleRow).join('')}`);
+      }
+      const options = sections.join('');
       el.innerHTML = `
         <div class="staple-menu">
           <button type="button" class="staple-toggle" id="stapleToggle" aria-expanded="${staplesOpen ? 'true' : 'false'}" aria-haspopup="listbox">
@@ -1185,13 +1211,16 @@
             ${options || '<div class="staple-empty">No staples yet. Add one below.</div>'}
             <form class="staple-form" id="stapleForm">
               <input type="text" id="stapleName" placeholder="Staple name" autocomplete="off" value="${esc(stapleDraft)}">
-              <select id="stapleAisle" aria-label="Staple aisle">${aisleOptions}</select>
+              <select id="stapleAisle" aria-label="Staple aisle">${aisleOptionsHtml(stapleAisle)}</select>
               <button type="submit" class="staple-add">Add staple</button>
             </form>
           </div>
         </div>`;
       const aisleSelect = document.getElementById('stapleAisle');
-      if (aisleSelect) aisleSelect.value = aisleChoices.includes(stapleAisle) || stapleAisle === '' ? stapleAisle : '';
+      if (aisleSelect) {
+        const names = aisleChoices(stapleAisle);
+        aisleSelect.value = stapleAisle === '' || stapleAisle === '__none__' || names.includes(stapleAisle) ? stapleAisle : '';
+      }
     }
 
     function renderItem(item, staples) {
@@ -1377,10 +1406,10 @@
       e.preventDefault();
       const name = document.getElementById('stapleName').value;
       const aisle = document.getElementById('stapleAisle').value;
-      if (!name.trim() || aisle === '__new__') return;
+      if (!name.trim() || !aisle || aisle === '__new__') return;
       staplesOpen = true;
       stapleDraft = '';
-      void createStaple(name, aisle);
+      void createStaple(name, aisleFromPick(aisle));
     });
 
     document.getElementById('staples').addEventListener('click', (e) => {
