@@ -333,14 +333,25 @@
       border-radius: 8px;
     }
 
+    .staple-group-head {
+      display: flex;
+      align-items: center;
+      gap: 0.1rem;
+    }
+
     .staple-group-name {
-      padding: 0.45rem 0.7rem 0.15rem;
+      flex: 1;
+      padding: 0.45rem 0.35rem 0.15rem 0;
       font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--muted);
     }
+
+    .staple-group.dragging .staple { display: none; }
+    .staple-group.drop-before { box-shadow: inset 0 3px 0 var(--accent); }
+    .staple-group.drop-into { outline: 1px dashed var(--accent); border-radius: 8px; }
 
     .staple-empty {
       color: var(--muted);
@@ -837,17 +848,20 @@
     }
 
     function aisleNames(store) {
-      const defined = (store.aisles || []).map(a => String(a).trim()).filter(Boolean);
-      const extras = [];
-      for (const item of store.items || []) {
-        const name = String(item.aisle || '').trim();
-        if (name && !defined.includes(name) && !extras.includes(name)) extras.push(name);
-      }
-      for (const staple of store.staples || []) {
-        const name = String(staple.aisle || '').trim();
-        if (name && !defined.includes(name) && !extras.includes(name)) extras.push(name);
-      }
-      return { defined, extras, all: [...defined, ...extras] };
+      const order = [];
+      const seen = new Set();
+      const push = (name) => {
+        const key = String(name ?? '').trim();
+        if (seen.has(key)) return;
+        seen.add(key);
+        order.push(key);
+      };
+      for (const name of store?.aisles || []) push(name);
+      for (const item of store?.items || []) push(item.aisle || '');
+      for (const staple of store?.staples || []) push(staple.aisle || '');
+      push('');
+      const defined = order.filter(Boolean);
+      return { defined, extras: [], all: defined, order };
     }
 
     function placeItem(items, item, beforeId) {
@@ -900,7 +914,7 @@
       const from = next.indexOf(name);
       if (from < 0) return next;
       next.splice(from, 1);
-      if (!beforeName) {
+      if (beforeName == null) {
         next.push(name);
         return next;
       }
@@ -973,7 +987,7 @@
       if (!trimmed || trimmed === oldName) return;
       if (aisleNames(store).all.some(a => a.toLowerCase() === trimmed.toLowerCase() && a !== oldName)) return;
       const next = cloneStore(store);
-      next.aisles = aisleNames(store).all.map(a => a === oldName ? trimmed : a);
+      next.aisles = aisleNames(store).order.map(a => a === oldName ? trimmed : a);
       next.items = next.items.map(i => (i.aisle || '') === oldName ? { ...i, aisle: trimmed } : i);
       next.staples = next.staples.map(s => (s.aisle || '') === oldName ? { ...s, aisle: trimmed } : s);
       if (pendingAisle === oldName) pendingAisle = trimmed;
@@ -985,7 +999,7 @@
       if (!store || busy) return;
       if (!confirm(`Remove the "${name}" aisle? Items move to Uncategorized.`)) return;
       const next = cloneStore(store);
-      next.aisles = aisleNames(store).all.filter(a => a !== name);
+      next.aisles = aisleNames(store).order.filter(a => a !== name);
       next.items = next.items.map(i => (i.aisle || '') === name ? { ...i, aisle: '' } : i);
       next.staples = next.staples.map(s => (s.aisle || '') === name ? { ...s, aisle: '' } : s);
       if (pendingAisle === name) pendingAisle = '';
@@ -1196,10 +1210,17 @@
           grouped.get(aisle).push(staple);
         }
       }
-      const sections = [`<div class="staple-group-name">Uncategorized</div>${uncategorized.map(stapleRow).join('')}`];
-      for (const [name, list] of grouped) {
-        sections.push(`<div class="staple-group-name">${esc(name)}</div>${list.map(stapleRow).join('')}`);
-      }
+      const sections = aisleNames(store).order.map(name => {
+        const list = name ? (grouped.get(name) || []) : uncategorized;
+        const label = name || 'Uncategorized';
+        return `<div class="staple-group" data-aisle="${esc(name)}">
+          <div class="staple-group-head">
+            <button type="button" class="drag-handle" data-drag="aisle" aria-label="Reorder ${esc(label)}">⋮⋮</button>
+            <div class="staple-group-name">${esc(label)}</div>
+          </div>
+          ${list.map(stapleRow).join('')}
+        </div>`;
+      });
       const options = sections.join('');
       el.innerHTML = `
         <div class="staple-menu">
@@ -1235,14 +1256,15 @@
       </div>`;
     }
 
-    function renderAisleSection(name, label, items, staples, movable) {
+    function renderAisleSection(name, label, items, staples) {
       const body = items.length
         ? items.map(item => renderItem(item, staples)).join('')
         : '<div class="aisle-empty">Nothing in this aisle</div>';
+      const named = Boolean(name);
       return `<section class="aisle" data-aisle="${esc(name)}">
         <div class="aisle-head">
-          ${movable ? `<button type="button" class="drag-handle" data-drag="aisle" aria-label="Reorder ${esc(label)} aisle">⋮⋮</button>` : ''}
-          ${movable
+          <button type="button" class="drag-handle" data-drag="aisle" aria-label="Reorder ${esc(label)}">⋮⋮</button>
+          ${named
             ? `<button type="button" class="aisle-name" data-rename-aisle="${esc(name)}">${esc(label)}</button>
                <button type="button" class="aisle-remove" data-delete-aisle="${esc(name)}" aria-label="Remove ${esc(label)} aisle">&times;</button>`
             : `<span class="aisle-name">${esc(label)}</span>`}
@@ -1284,25 +1306,23 @@
         return;
       }
 
-      const defined = aisleNames(store).defined;
+      const order = aisleNames(store).order;
       const buckets = new Map();
       const uncategorized = [];
       for (const item of active) {
         const aisle = String(item.aisle || '').trim();
-        if (!aisle) {
-          uncategorized.push(item);
-          continue;
+        if (!aisle) uncategorized.push(item);
+        else {
+          if (!buckets.has(aisle)) buckets.set(aisle, []);
+          buckets.get(aisle).push(item);
         }
-        if (!buckets.has(aisle)) buckets.set(aisle, []);
-        buckets.get(aisle).push(item);
       }
-      const orderedNames = [
-        ...defined.filter(name => (buckets.get(name) || []).length),
-        ...[...buckets.keys()].filter(name => !defined.includes(name)),
-      ];
 
-      let html = orderedNames.map(name => renderAisleSection(name, name, buckets.get(name), staples, true)).join('');
-      if (uncategorized.length) html += renderAisleSection('', 'Uncategorized', uncategorized, staples, false);
+      let html = order.map(name => {
+        const list = name ? (buckets.get(name) || []) : uncategorized;
+        if (!list.length) return '';
+        return renderAisleSection(name, name || 'Uncategorized', list, staples);
+      }).join('');
       html += renderDone(done, staples);
       el.innerHTML = html;
     }
@@ -1504,12 +1524,14 @@
     function findDrop(clientY) {
       if (!dragState) return null;
       if (dragState.kind === 'aisle') {
-        const sections = [...document.querySelectorAll('.aisle')].filter(el => el.dataset.aisle && el.dataset.aisle !== dragState.aisleName);
+        const sections = [...document.querySelectorAll(dragState.scope === 'staples' ? '#staplePanel .staple-group' : '#list .aisle')]
+          .filter(el => el.dataset.aisle !== dragState.aisleName);
         for (const section of sections) {
           const rect = section.getBoundingClientRect();
-          if (clientY < rect.top + rect.height / 2) return { type: 'aisle', beforeName: section.dataset.aisle };
+          if (clientY < rect.top + rect.height / 2) return { type: 'aisle', beforeName: section.dataset.aisle ?? '' };
         }
-        return sections.length ? { type: 'aisle', beforeName: '' } : null;
+        const last = sections[sections.length - 1];
+        return last ? { type: 'aisle', beforeName: null, afterName: last.dataset.aisle ?? '' } : null;
       }
 
       const sections = [...document.querySelectorAll('#list .aisle')];
@@ -1539,9 +1561,10 @@
     function applyDragHint() {
       clearDragStyles();
       if (!dragState) return;
+      const aisleSel = dragState.scope === 'staples' ? '#staplePanel .staple-group' : '#list .aisle';
       const origin = dragState.kind === 'item'
         ? document.querySelector(`#list .item${attrSel('data-id', dragState.itemId)}`)
-        : document.querySelector(`#list .aisle${attrSel('data-aisle', dragState.aisleName)}`);
+        : document.querySelector(`${aisleSel}${attrSel('data-aisle', dragState.aisleName)}`);
       origin?.classList.add('dragging');
       const hint = dragState.hint;
       if (!hint) return;
@@ -1549,11 +1572,11 @@
         document.querySelector(`#list .item${attrSel('data-id', hint.beforeId)}`)?.classList.add('drop-before');
       } else if (hint.type === 'item') {
         document.querySelector(`#list .aisle${attrSel('data-aisle', hint.aisle)}`)?.classList.add('drop-into');
-      } else if (hint.beforeName) {
-        document.querySelector(`#list .aisle${attrSel('data-aisle', hint.beforeName)}`)?.classList.add('drop-before');
-      } else {
-        const sections = [...document.querySelectorAll('#list .aisle')].filter(el => el.dataset.aisle);
+      } else if (hint.beforeName == null) {
+        const sections = [...document.querySelectorAll(aisleSel)];
         sections[sections.length - 1]?.classList.add('drop-into');
+      } else {
+        document.querySelector(`${aisleSel}${attrSel('data-aisle', hint.beforeName)}`)?.classList.add('drop-before');
       }
     }
 
@@ -1570,8 +1593,17 @@
         if (JSON.stringify(items) === JSON.stringify(next.items)) return;
         next.items = items;
       } else {
-        const before = aisleNames(store).all;
-        const aisles = reorderAisles(before, state.aisleName, state.hint.beforeName || null);
+        const before = aisleNames(store).order;
+        let aisles;
+        if (state.hint.beforeName == null && Object.prototype.hasOwnProperty.call(state.hint, 'afterName')) {
+          const rest = before.filter(name => name !== state.aisleName);
+          const at = rest.indexOf(state.hint.afterName);
+          aisles = [...rest];
+          if (at < 0) aisles.push(state.aisleName);
+          else aisles.splice(at + 1, 0, state.aisleName);
+        } else {
+          aisles = reorderAisles(before, state.aisleName, state.hint.beforeName);
+        }
         if (JSON.stringify(aisles) === JSON.stringify(before)) return;
         next.aisles = aisles;
       }
@@ -1583,10 +1615,11 @@
       if (!handle || busy) return;
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       const item = handle.closest('.item');
-      const aisle = handle.closest('.aisle');
+      const aisle = handle.closest('.aisle, .staple-group');
       dragState = {
         pointerId: e.pointerId,
         kind: handle.dataset.drag,
+        scope: aisle?.classList.contains('staple-group') ? 'staples' : 'list',
         itemId: item?.dataset.id || '',
         aisleName: aisle?.dataset.aisle || '',
         startY: e.clientY,
@@ -1617,14 +1650,15 @@
       void finishDrag(moved);
     }
 
-    const listEl = document.getElementById('list');
-    listEl.addEventListener('pointerdown', onDragPointerDown);
-    listEl.addEventListener('pointermove', onDragPointerMove, { passive: false });
-    listEl.addEventListener('pointerup', onDragPointerUp);
-    listEl.addEventListener('pointercancel', (e) => {
-      if (!dragState || e.pointerId !== dragState.pointerId) return;
-      void finishDrag(false);
-    });
+    for (const dragRoot of [document.getElementById('list'), document.getElementById('staples')]) {
+      dragRoot.addEventListener('pointerdown', onDragPointerDown);
+      dragRoot.addEventListener('pointermove', onDragPointerMove, { passive: false });
+      dragRoot.addEventListener('pointerup', onDragPointerUp);
+      dragRoot.addEventListener('pointercancel', (e) => {
+        if (!dragState || e.pointerId !== dragState.pointerId) return;
+        void finishDrag(false);
+      });
+    }
 
     document.getElementById('undoBtn').addEventListener('click', () => void undoLast());
     document.getElementById('clearDone').addEventListener('click', () => void clearDone());
